@@ -1,5 +1,5 @@
 import express from "express";
-import { apiConfig } from "./config.js";
+import { config } from "./config.js";
 import { BadRequest, Unauthorized, Forbidden, NotFound, } from "./CustomErrors.js";
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -10,7 +10,7 @@ await migrate(drizzle(migrationClient), config.migrationConfig);
 await migrationClient.end();
 //   Middleware
 const middlewareMetricsInc = (req, res, next) => {
-    apiConfig.fileserverHits++;
+    config.fileserverHits++;
     next();
 };
 const middlewareLogResponses = (req, res, next) => {
@@ -34,13 +34,13 @@ const handlerAdminMetrics = (req, res) => {
 <html>
   <body>
     <h1>Welcome, Chirpy Admin</h1>
-    <p>Chirpy has been visited ${apiConfig.fileserverHits} times!</p>
+    <p>Chirpy has been visited ${config.fileserverHits} times!</p>
   </body>
 </html>
 `);
 };
 const handlerReset = (req, res) => {
-    apiConfig.fileserverHits = 0;
+    config.fileserverHits = 0;
     res.set("Content-Type", "text/plain; charset=utf-8").send("OK");
 };
 const handlerValidateChirp = (req, res, next) => {
