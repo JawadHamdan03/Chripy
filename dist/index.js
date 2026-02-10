@@ -1,5 +1,6 @@
 import express from "express";
 import { apiConfig } from "./config.js";
+import { BadRequest, Unauthorized, NotFound, Forbidden } from "./CustomErrors.js";
 // middlewares
 function middlewareMetricsInc(req, res, next) {
     apiConfig.fileserverHits++;
@@ -53,7 +54,7 @@ const handlerReset = async (req, res, next) => {
         next(err);
     }
 };
-const handlerValidateChirp = async (req, res) => {
+const handlerValidateChirp = async (req, res, next) => {
     const chirp = req.body?.body;
     try {
         if (!chirp || typeof chirp !== "string") {
@@ -63,7 +64,7 @@ const handlerValidateChirp = async (req, res) => {
             return;
         }
         if (chirp.length > 140) {
-            throw new Error("Chirp is too long");
+            throw new BadRequest("Chirp is too long");
             res.status(400).json({
                 error: "Chirp is too long",
             });
@@ -83,11 +84,20 @@ const handlerValidateChirp = async (req, res) => {
         });
     }
     catch (err) {
+        next(err);
     }
 };
 const errorHandler = async (err, req, res, next) => {
-    console.error(`${err.message}`);
-    res.status(500).json({ error: "Something went wrong on our end" });
+    if (err instanceof NotFound)
+        res.status(404).send("Not Found");
+    else if (err instanceof Unauthorized)
+        res.status(401).send("Unauthorized");
+    else if (err instanceof Forbidden)
+        res.status(403).send("Forbidden");
+    else if (err instanceof BadRequest)
+        res.status(400).send("Bad Request");
+    else
+        res.status(500).send("Something went wrong on our end");
 };
 ////////////////////////////////////////////
 const app = express();
