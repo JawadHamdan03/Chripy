@@ -86,7 +86,7 @@ const handlerReset = async (
 };
 
 
-const handlerValidateChirp = async (req: Request, res: Response) => {
+const handlerValidateChirp = async (req: Request, res: Response, next: NextFunction) => {
   const chirp = req.body?.body;
 
   try {
@@ -124,7 +124,7 @@ const handlerValidateChirp = async (req: Request, res: Response) => {
   }
 
   catch (err) {
-
+    next(err)
   }
 
 }
