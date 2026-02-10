@@ -1,17 +1,24 @@
 import express, { Request, Response, NextFunction } from "express";
 import { apiConfig } from "./config.js";
-import { BadRequest, Unauthorized, NotFound, Forbidden } from "./CustomErrors.js"
+import {
+  BadRequest,
+  Unauthorized,
+  Forbidden,
+  NotFound,
+} from "./CustomErrors.js";
 
-// middlewares
-function middlewareMetricsInc(
+/* =====================
+   Middleware
+===================== */
+
+const middlewareMetricsInc = (
   req: Request,
   res: Response,
   next: NextFunction
-): void {
+): void => {
   apiConfig.fileserverHits++;
   next();
-}
-
+};
 
 const middlewareLogResponses = (
   req: Request,
@@ -19,41 +26,33 @@ const middlewareLogResponses = (
   next: NextFunction
 ): void => {
   res.on("finish", () => {
-    const statusCode = res.statusCode;
-
-    if (statusCode !== 200) {
+    if (res.statusCode !== 200) {
       console.log(
-        `[NON-OK] ${req.method} ${req.url} - Status: ${statusCode}`
+        `[NON-OK] ${req.method} ${req.originalUrl} - Status: ${res.statusCode}`
       );
     }
   });
-
   next();
 };
 
+/* =====================
+   Handlers
+===================== */
 
-// handlers
-const handlerReadiness = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    res
-      .set("Content-Type", "text/plain; charset=utf-8")
-      .send("OK");
-  }
-  catch (err) {
-    next(err);
-  }
-
+const handlerReadiness = (
+  req: Request,
+  res: Response
+): void => {
+  res.set("Content-Type", "text/plain; charset=utf-8").send("OK");
 };
 
-const handlerAdminMetrics = async (
+const handlerAdminMetrics = (
   req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    res
-      .set("Content-Type", "text/html; charset=utf-8")
-      .send(`
+  res: Response
+): void => {
+  res
+    .set("Content-Type", "text/html; charset=utf-8")
+    .send(`
 <html>
   <body>
     <h1>Welcome, Chirpy Admin</h1>
@@ -61,107 +60,103 @@ const handlerAdminMetrics = async (
   </body>
 </html>
 `);
-  }
-  catch (err) {
-    next(err);
-  }
-}
+};
 
+const handlerReset = (
+  req: Request,
+  res: Response
+): void => {
+  apiConfig.fileserverHits = 0;
+  res.set("Content-Type", "text/plain; charset=utf-8").send("OK");
+};
 
-const handlerReset = async (
+const handlerValidateChirp = (
   req: Request,
   res: Response,
   next: NextFunction
-): Promise<void> => {
-  apiConfig.fileserverHits = 0;
+): void => {
   try {
-    res
-      .set("Content-Type", "text/plain; charset=utf-8")
-      .send("OK");
-  }
-  catch (err) {
-    next(err)
-  }
+    const chirp = req.body?.body;
 
-};
-
-
-const handlerValidateChirp = async (req: Request, res: Response, next: NextFunction) => {
-  const chirp = req.body?.body;
-
-  try {
     if (!chirp || typeof chirp !== "string") {
-      res.status(400).json({
-        error: "Invalid chirp body",
-      });
-      return;
+      throw new BadRequest("Invalid chirp body");
     }
 
     if (chirp.length > 140) {
-      throw new BadRequest("Chirp is too long");
-      res.status(400).json({
-        error: "Chirp is too long",
-      });
-      return;
+      throw new BadRequest("Chirp is too long. Max length is 140");
     }
 
     const profaneWords = ["kerfuffle", "sharbert", "fornax"];
 
-    const words = chirp.split(" ");
+    const cleanedBody = chirp
+      .split(" ")
+      .map((word) =>
+        profaneWords.includes(word.toLowerCase()) ? "****" : word
+      )
+      .join(" ");
 
-    const cleanedWords = words.map((word) => {
-      if (profaneWords.includes(word.toLowerCase())) {
-        return "****";
-      }
-      return word;
-    });
+    res.status(200).json({ cleanedBody });
+  } catch (err) {
+    next(err);
+  }
+};
 
-    const cleanedBody = cleanedWords.join(" ");
+/* =====================
+   Error Handler
+===================== */
 
-    res.status(200).json({
-      cleanedBody: cleanedBody,
-    });
+const errorHandler = (
+  err: Error,
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  if (err instanceof BadRequest) {
+    res.status(400).json({ error: err.message });
+    return;
   }
 
-  catch (err) {
-    next(err)
+  if (err instanceof Unauthorized) {
+    res.status(401).json({ error: err.message });
+    return;
   }
 
-}
+  if (err instanceof Forbidden) {
+    res.status(403).json({ error: err.message });
+    return;
+  }
 
+  if (err instanceof NotFound) {
+    res.status(404).json({ error: err.message });
+    return;
+  }
 
-const errorHandler = async (err: Error, req: Request, res: Response, next: NextFunction) => {
-  if (err instanceof NotFound)
-    res.status(404).send("Not Found");
-  else if (err instanceof Unauthorized)
-    res.status(401).send("Unauthorized");
-  else if (err instanceof Forbidden)
-    res.status(403).send("Forbidden");
-  else if (err instanceof BadRequest)
-    res.status(400).send({ err: err.message });
-  else res.status(500).send("Something went wrong on our end")
-}
+  // Non-custom errors
+  console.error(err);
+  res.status(500).json({ error: "Internal Server Error" });
+};
 
+/* =====================
+   App Setup
+===================== */
 
-
-////////////////////////////////////////////
 const app = express();
 const PORT = 8080;
 
-app.use("/app", middlewareMetricsInc);
 app.use(express.json());
 app.use(middlewareLogResponses);
 
+app.use("/app", middlewareMetricsInc);
 app.use("/app", express.static("./src/app"));
+
 app.get("/api/healthz", handlerReadiness);
 app.get("/admin/metrics", handlerAdminMetrics);
-app.post("/admin/reset", handlerReset);
+app.get("/admin/reset", handlerReset);
 app.post("/api/validate_chirp", handlerValidateChirp);
-
 
 app.use(errorHandler);
 
-
 app.listen(PORT, () => {
-  console.log(`Server is running at http://localhost:${PORT}`);
+  console.log(`Server running at http://localhost:${PORT}`);
 });
+
