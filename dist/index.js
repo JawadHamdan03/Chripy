@@ -107,6 +107,9 @@ const handlerGetChirps = async (req, res, next) => {
 const handlerGetChirpById = async (req, res, next) => {
     try {
         const chirpId = req.params.chirpId;
+        if (!chirpId || Array.isArray(chirpId)) {
+            throw new BadRequest("Invalid chirp id");
+        }
         const chirp = await getChirpById(chirpId);
         if (!chirp) {
             throw new NotFound("Chirp not found");

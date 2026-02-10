@@ -173,6 +173,11 @@ const handlerGetChirpById = async (
 ): Promise<void> => {
   try {
     const chirpId = req.params.chirpId;
+
+    if (!chirpId || Array.isArray(chirpId)) {
+      throw new BadRequest("Invalid chirp id");
+    }
+
     const chirp = await getChirpById(chirpId);
 
     if (!chirp) {
