@@ -8,6 +8,7 @@ import {
 } from "./CustomErrors.js";
 import {
     checkPasswordHash,
+    getAPIKey,
     getBearerToken,
     hashPassword,
     makeJWT,
@@ -371,6 +372,17 @@ export const handlerPolkaWebhook = async (
     next: NextFunction
 ): Promise<void> => {
     try {
+        let apiKey: string;
+        try {
+            apiKey = getAPIKey(req);
+        } catch (error) {
+            throw new Unauthorized("Invalid or expired token");
+        }
+
+        if (apiKey !== config.polkaKey) {
+            throw new Unauthorized("Invalid or expired token");
+        }
+
         const event = req.body?.event;
         if (event !== "user.upgraded") {
             res.status(204).send();

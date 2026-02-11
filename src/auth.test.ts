@@ -1,6 +1,6 @@
 import type { Request } from "express";
 import { describe, expect, it } from "vitest";
-import { getBearerToken, makeJWT, validateJWT } from "./auth";
+import { getAPIKey, getBearerToken, makeJWT, validateJWT } from "./auth";
 
 describe("JWT", () => {
     const userID = "user-123";
@@ -49,5 +49,34 @@ describe("getBearerToken", () => {
         } as unknown as Request;
 
         expect(() => getBearerToken(req)).toThrow();
+    });
+});
+
+describe("getAPIKey", () => {
+    it("returns the key from the Authorization header", () => {
+        const req = {
+            get: (header: string) =>
+                header === "Authorization" ? "ApiKey test-key" : undefined,
+        } as unknown as Request;
+
+        const key = getAPIKey(req);
+        expect(key).toBe("test-key");
+    });
+
+    it("throws when the header is missing", () => {
+        const req = {
+            get: () => undefined,
+        } as unknown as Request;
+
+        expect(() => getAPIKey(req)).toThrow();
+    });
+
+    it("throws when the header is not an ApiKey", () => {
+        const req = {
+            get: (header: string) =>
+                header === "Authorization" ? "Bearer abc" : undefined,
+        } as unknown as Request;
+
+        expect(() => getAPIKey(req)).toThrow();
     });
 });
