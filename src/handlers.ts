@@ -301,14 +301,29 @@ export const handlerGetChirps = async (
 ): Promise<void> => {
     try {
         const authorId = req.query.authorId;
+        const sort = req.query.sort;
 
         if (authorId && typeof authorId !== "string") {
             throw new BadRequest("Invalid authorId");
         }
 
+        if (sort && typeof sort !== "string") {
+            throw new BadRequest("Invalid sort");
+        }
+
+        if (sort && sort !== "asc" && sort !== "desc") {
+            throw new BadRequest("Invalid sort");
+        }
+
         const chirps = authorId
             ? await getChirpsByAuthorId(authorId)
             : await getChirps();
+
+        if (sort === "desc") {
+            chirps.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        } else {
+            chirps.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+        }
         res.status(200).json(chirps);
     } catch (err) {
         next(err);
