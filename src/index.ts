@@ -12,6 +12,7 @@ import {
   handlerRefresh,
   handlerReset,
   handlerRevoke,
+  handlerUpdateUser,
 } from "./handlers.js";
 
 import postgres from "postgres";
@@ -110,6 +111,7 @@ app.post("/api/login", handlerLogin);
 app.post("/api/chirps", handlerCreateChirp);
 app.post("/api/refresh", handlerRefresh);
 app.post("/api/revoke", handlerRevoke);
+app.put("/api/users", handlerUpdateUser);
 
 app.use(errorHandler);
 
