@@ -26,6 +26,7 @@ import {
     deleteChirpById,
     getChirpById,
     getChirps,
+    getChirpsByAuthorId,
 } from "./db/queries/chirps.js";
 import {
     createUser,
@@ -299,7 +300,15 @@ export const handlerGetChirps = async (
     next: NextFunction
 ): Promise<void> => {
     try {
-        const chirps = await getChirps();
+        const authorId = req.query.authorId;
+
+        if (authorId && typeof authorId !== "string") {
+            throw new BadRequest("Invalid authorId");
+        }
+
+        const chirps = authorId
+            ? await getChirpsByAuthorId(authorId)
+            : await getChirps();
         res.status(200).json(chirps);
     } catch (err) {
         next(err);
