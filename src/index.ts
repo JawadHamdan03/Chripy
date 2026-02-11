@@ -5,6 +5,7 @@ import {
   handlerAdminMetrics,
   handlerCreateChirp,
   handlerCreateUser,
+  handlerDeleteChirp,
   handlerGetChirpById,
   handlerGetChirps,
   handlerLogin,
@@ -112,6 +113,7 @@ app.post("/api/chirps", handlerCreateChirp);
 app.post("/api/refresh", handlerRefresh);
 app.post("/api/revoke", handlerRevoke);
 app.put("/api/users", handlerUpdateUser);
+app.delete("/api/chirps/:chirpId", handlerDeleteChirp);
 
 app.use(errorHandler);
 
